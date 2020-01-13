@@ -17,7 +17,7 @@ local bigSvg = love.filesystem.newFileData('big.svg'):getString()
 local bigSvgDrawing = tove.newGraphics(bigSvg, 'copy')
 
 function love.draw()
-    bigSvgDrawing:draw()
+    myDrawing:draw()
 
     love.graphics.print('fps: ' .. love.timer.getFPS(), 20, 20)
 end
