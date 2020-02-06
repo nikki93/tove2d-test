@@ -29,6 +29,7 @@ local AMOUNT = 3
 local FRAMES = 20
 local TWEEN = 2
 local SPEED = 8
+local POINTS = false
 
 local function wobbleDrawing(drawing, amount)
     amount = amount or 3
@@ -43,6 +44,12 @@ local function wobbleDrawing(drawing, amount)
                     curve.cp1y = curve.cp1y + amount * (2 * math.random() - 1)
                     curve.cp2x = curve.cp2x + amount * (2 * math.random() - 1)
                     curve.cp2y = curve.cp2y + amount * (2 * math.random() - 1)
+                    if POINTS then
+                        curve.x0 = curve.x0 + amount * (2 * math.random() - 1)
+                        curve.y0 = curve.y0 + amount * (2 * math.random() - 1)
+                        curve.x = curve.x + amount * (2 * math.random() - 1)
+                        curve.y = curve.y + amount * (2 * math.random() - 1)
+                    end
                 end
             end
         end
@@ -147,6 +154,13 @@ function castle.uiupdate()
         step = 0.1,
         onChange = function(newSpeed)
             SPEED = newSpeed
+        end,
+    })
+
+    ui.toggle('control points only', 'control points and vertices', POINTS, {
+        onToggle = function(newPoints)
+            POINTS = newPoints
+            createFlipbooks()
         end,
     })
 end
