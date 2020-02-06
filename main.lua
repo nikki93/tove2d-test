@@ -25,10 +25,10 @@ local drawing4 = loadDrawing('soccer_goal-2.svg')
 --    }
 --end
 
-local AMOUNT = 1.14
-local FRAMES = 8
+local AMOUNT = 1.25
+local FRAMES = 10
 local TWEEN = 2
-local SPEED = 10
+local SPEED = 8
 local POINTS = true
 
 local function wobbleDrawing(drawing, amount)
