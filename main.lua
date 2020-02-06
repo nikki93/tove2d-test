@@ -24,12 +24,12 @@ local drawing4 = loadDrawing('soccer_goal-2.svg')
 --        scale = 0.2 + 0.8 * math.random(),
 --    }
 --end
---
-local AMOUNT = 3
-local FRAMES = 20
+
+local AMOUNT = 1.14
+local FRAMES = 8
 local TWEEN = 2
-local SPEED = 8
-local POINTS = false
+local SPEED = 10
+local POINTS = true
 
 local function wobbleDrawing(drawing, amount)
     amount = amount or 3
@@ -128,25 +128,25 @@ end
 local ui = castle.ui
 
 function castle.uiupdate()
-    ui.slider('amount', AMOUNT, 0.2, 8, {
-        step = 0.1,
+    ui.slider('amount', AMOUNT, 0.1, 6, {
+        step = 0.02,
         onChange = function(newAmount)
             AMOUNT = newAmount
-            nextReload = 0.15
+            nextReload = 0.25
         end,
     })
 
     ui.slider('frames', FRAMES, 2, 24, {
         onChange = function(newFrames)
             FRAMES = newFrames
-            nextReload = 0.15
+            nextReload = 0.25
         end,
     })
 
     ui.slider('tween', TWEEN, 1, 4, {
         onChange = function(newTween)
             TWEEN = newTween
-            nextReload = 0.15
+            nextReload = 0.25
         end,
     })
 
