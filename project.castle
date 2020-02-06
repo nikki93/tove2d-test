@@ -1,0 +1,5 @@
+owner: nikki
+title: Vector art test
+description: Testing vector art!
+main: main.lua
+dimensions: 800
