@@ -1,5 +1,24 @@
 local tove = require 'tove'
 
+local PATHS = {
+    '0207_ball_2_des2-01.svg',
+    'brick-01.svg',
+    'door-01.svg',
+    'dove-01.svg',
+    'pufferfish-01.svg',
+    '0207_circle_8points.svg',
+    '0207_square_8points.svg',
+    '0207_circle1-01.svg',
+    '0207_square.svg',
+}
+
+local PATH = PATHS[1]
+local AMOUNT = 2.85
+local FRAMES = 10
+local TWEEN = 2
+local SPEED = 8
+local POINTS = false
+
 local function loadDrawing(path)
     local drawing = tove.newGraphics(love.filesystem.newFileData(path):getString(), 400)
     drawing:setResolution(2)
@@ -8,38 +27,18 @@ local function loadDrawing(path)
     return drawing
 end
 
-local drawing1 = loadDrawing('basketball.svg')
-local drawing2 = loadDrawing('cart.svg')
-local drawing3 = loadDrawing('hole.svg')
-local drawing4 = loadDrawing('soccer_goal.svg')
-
---local blocks = {}
---for i = 1, 20 do
---    blocks[i] = {
---        x = 200 + 400 * math.random(),
---        phase1 = 2 * math.pi * math.random(),
---        phase2 = 2 * math.pi * math.random(),
---        rate1 = 0.08 + 0.8 * (2 * math.random() - 1),
---        rate2 = 0.08 + 0.8 * (2 * math.random() - 1),
---        scale = 0.2 + 0.8 * math.random(),
---    }
---end
-
-local AMOUNT = 1.25
-local FRAMES = 10
-local TWEEN = 2
-local SPEED = 8
-local POINTS = true
-
 local function wobbleDrawing(drawing, amount)
     amount = amount or 3
     local frames = {}
     for f = 1, FRAMES do
         local clone = drawing:clone()
         for i = 1, clone.paths.count do
-            for j = 1, clone.paths[i].subpaths.count do
-                for k = 1, clone.paths[i].subpaths[j].curves.count do
-                    local curve = clone.paths[i].subpaths[j].curves[k]
+            local path = clone.paths[i]
+            for j = 1, path.subpaths.count do
+                local subpath = path.subpaths[j]
+                local numCurves = subpath.curves.count
+                for k = 1, numCurves do
+                    local curve = subpath.curves[k]
                     curve.cp1x = curve.cp1x + amount * (2 * math.random() - 1)
                     curve.cp1y = curve.cp1y + amount * (2 * math.random() - 1)
                     curve.cp2x = curve.cp2x + amount * (2 * math.random() - 1)
@@ -63,52 +62,32 @@ local function wobbleDrawing(drawing, amount)
     return tove.newFlipbook(TWEEN, tween)
 end
 
-local flipbook1, flipbook2, flipbook3, flipbook4, flipbook5
+local flipbook
 
-local function createFlipbooks()
-    flipbook1 = wobbleDrawing(drawing1, 2 * AMOUNT)
-    flipbook2 = wobbleDrawing(drawing2, 2 * AMOUNT)
-    flipbook3 = wobbleDrawing(drawing3, 2 * AMOUNT)
-    flipbook4 = wobbleDrawing(drawing4, 2 * AMOUNT)
-
-    flipbook5 = wobbleDrawing(drawing1, AMOUNT)
+local function createFlipbook()
+    network.async(function()
+        flipbook = wobbleDrawing(loadDrawing(PATH), AMOUNT)
+    end)
 end
 
-createFlipbooks()
+createFlipbook()
 
 function love.draw()
-    love.graphics.clear(0, 0.49, 0.204)
-
-    love.graphics.push('all')
-
-    local t = love.timer.getTime()
-
-    flipbook1.t = (SPEED * t) % flipbook1._duration
-    flipbook2.t = (SPEED * t) % flipbook2._duration
-    flipbook3.t = (SPEED * t) % flipbook3._duration
-    flipbook4.t = (SPEED * t) % flipbook4._duration
-
-    flipbook5.t = (SPEED * t) % flipbook5._duration
-
-    --for _, block in ipairs(blocks) do
-    --    love.graphics.push()
-    --    love.graphics.translate(block.x, 0.5 * 450 * (math.sin(block.phase1 + block.rate1 * t) + 1))
-    --    love.graphics.rotate(block.phase2 + block.rate2 * t)
-    --    love.graphics.scale(block.scale)
-    --    flipbook1:draw()
-    --    love.graphics.pop()
-    --end
-
     local W, H = love.graphics.getDimensions()
 
-    flipbook5:draw(0.5 * W, 0.5 * H, 0, 0.6, 0.6)
+    love.graphics.clear(0.54, 0.64, 0.80)
 
-    flipbook1:draw(0.25 * W, 0.25 * H, 0, 0.25, 0.25)
-    flipbook2:draw(0.75 * W, 0.25 * H, 0, 0.25, 0.25)
-    flipbook3:draw(0.25 * W, 0.75 * H, 0, 0.25, 0.25)
-    flipbook4:draw(0.75 * W, 0.75 * H, 0, 0.25, 0.25)
+    if flipbook then
+        love.graphics.push('all')
 
-    love.graphics.pop('all')
+        local t = love.timer.getTime()
+
+        flipbook.t = (SPEED * t) % flipbook._duration
+
+        flipbook:draw(0.5 * W, 0.5 * H, 0, 0.6, 0.6)
+
+        love.graphics.pop('all')
+    end
 
     love.graphics.print('fps: ' .. love.timer.getFPS(), 20, 20)
 end
@@ -120,7 +99,7 @@ function love.update(dt)
         nextReload = nextReload - dt
         if nextReload <= 0 then
             nextReload = 0
-            createFlipbooks()
+            createFlipbook()
         end
     end
 end
@@ -128,6 +107,17 @@ end
 local ui = castle.ui
 
 function castle.uiupdate()
+    --for i = 1, #PATHS do
+    --    ui.image(PATHS[i], { width = 150, height = 150 })
+    --end
+
+    ui.dropdown('file', PATH, PATHS, {
+        onChange = function(newPath)
+            PATH = newPath
+            createFlipbook()
+        end,
+    })
+
     ui.slider('amount', AMOUNT, 0.1, 6, {
         step = 0.02,
         onChange = function(newAmount)
@@ -160,7 +150,7 @@ function castle.uiupdate()
     ui.toggle('control points only', 'control points and vertices', POINTS, {
         onToggle = function(newPoints)
             POINTS = newPoints
-            createFlipbooks()
+            createFlipbook()
         end,
     })
 end
