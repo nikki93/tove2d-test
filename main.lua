@@ -8,10 +8,10 @@ local function loadDrawing(path)
     return drawing
 end
 
-local drawing1 = loadDrawing('basketball-layered.svg')
-local drawing2 = loadDrawing('cart-2.svg')
-local drawing3 = loadDrawing('hole-2.svg')
-local drawing4 = loadDrawing('soccer_goal-2.svg')
+local drawing1 = loadDrawing('basketball.svg')
+local drawing2 = loadDrawing('cart.svg')
+local drawing3 = loadDrawing('hole.svg')
+local drawing4 = loadDrawing('soccer_goal.svg')
 
 --local blocks = {}
 --for i = 1, 20 do
