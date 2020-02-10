@@ -16,9 +16,10 @@ local PATHS = {
 local SCALE = 0.6
 
 local PATH = PATHS[1]
-local AMOUNT = 2.85
+local AMOUNT = 4
+local NOISE_SCALE = 1
 local FRAMES = 10
-local TWEEN = 2
+local TWEEN = 1
 local SPEED = 8
 local POINTS = false
 
@@ -29,13 +30,13 @@ local function loadDrawing(path)
     return drawing
 end
 
-local function wobblePoint(x, y, amount, seed)
-    local dx = amount * (2 * love.math.noise(x, y, 1, seed) - 1)
-    local dy = amount * (2 * love.math.noise(x, y, 2, seed) - 1)
+local function wobblePoint(x, y, amount, seed, scale)
+    local dx = amount * (2 * love.math.noise(scale * x, scale * y, 1, seed) - 1)
+    local dy = amount * (2 * love.math.noise(scale * x, scale * y, 2, seed) - 1)
     return x + dx, y + dy
 end
 
-local function wobbleDrawing(drawing, amount)
+local function wobbleDrawing(drawing, amount, noiseScale)
     amount = amount or 3
     local frames = {}
     for f = 1, FRAMES do
@@ -48,11 +49,11 @@ local function wobbleDrawing(drawing, amount)
                 for k = 1, numCurves do
                     local seed = FRAMES * f + j
                     local curve = subpath.curves[k]
-                    curve.cp1x, curve.cp1y = wobblePoint(curve.cp1x, curve.cp1y, amount, seed)
-                    curve.cp2x, curve.cp2y = wobblePoint(curve.cp2x, curve.cp2y, amount, seed)
+                    curve.cp1x, curve.cp1y = wobblePoint(curve.cp1x, curve.cp1y, amount, seed, noiseScale)
+                    curve.cp2x, curve.cp2y = wobblePoint(curve.cp2x, curve.cp2y, amount, seed, noiseScale)
                     if POINTS then
-                        curve.x0, curve.y0 = wobblePoint(curve.x0, curve.y0, amount, seed)
-                        curve.x, curve.y = wobblePoint(curve.x, curve.y, amount, seed)
+                        curve.x0, curve.y0 = wobblePoint(curve.x0, curve.y0, amount, seed, noiseScale)
+                        curve.x, curve.y = wobblePoint(curve.x, curve.y, amount, seed, noiseScale)
                     end
                 end
             end
@@ -71,7 +72,7 @@ local flipbook
 
 local function createFlipbook()
     network.async(function()
-        flipbook = wobbleDrawing(loadDrawing(PATH), AMOUNT)
+        flipbook = wobbleDrawing(loadDrawing(PATH), AMOUNT, NOISE_SCALE)
     end)
 end
 
@@ -125,8 +126,8 @@ function castle.uiupdate()
         end,
     })
 
-    ui.slider('amount', AMOUNT, 0.1, 6, {
-        step = 0.02,
+    ui.slider('amount', AMOUNT, 0.1, 14, {
+        step = 0.01,
         onChange = function(newAmount)
             AMOUNT = newAmount
             nextReload = 0.25
@@ -136,6 +137,14 @@ function castle.uiupdate()
     ui.slider('frames', FRAMES, 2, 24, {
         onChange = function(newFrames)
             FRAMES = newFrames
+            nextReload = 0.25
+        end,
+    })
+
+    ui.slider('noise scale', NOISE_SCALE, 0.02, 3, {
+        step = 0.01,
+        onChange = function(newNoiseScale)
+            NOISE_SCALE = newNoiseScale
             nextReload = 0.25
         end,
     })
