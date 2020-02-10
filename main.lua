@@ -10,7 +10,10 @@ local PATHS = {
     '0207_square_8points.svg',
     '0207_circle1-01.svg',
     '0207_square.svg',
+    'test.svg',
 }
+
+local SCALE = 0.6
 
 local PATH = PATHS[1]
 local AMOUNT = 2.85
@@ -21,10 +24,15 @@ local POINTS = false
 
 local function loadDrawing(path)
     local drawing = tove.newGraphics(love.filesystem.newFileData(path):getString(), 400)
-    drawing:setResolution(2)
     --drawing:setUsage('points', 'dynamic')
-    --drawing:setDisplay('mesh', 1024)
+    drawing:setDisplay('mesh', 1024)
     return drawing
+end
+
+local function wobblePoint(x, y, amount, seed)
+    local dx = amount * (2 * love.math.noise(x, y, 1, seed) - 1)
+    local dy = amount * (2 * love.math.noise(x, y, 2, seed) - 1)
+    return x + dx, y + dy
 end
 
 local function wobbleDrawing(drawing, amount)
@@ -38,16 +46,13 @@ local function wobbleDrawing(drawing, amount)
                 local subpath = path.subpaths[j]
                 local numCurves = subpath.curves.count
                 for k = 1, numCurves do
+                    local seed = FRAMES * f + j
                     local curve = subpath.curves[k]
-                    curve.cp1x = curve.cp1x + amount * (2 * math.random() - 1)
-                    curve.cp1y = curve.cp1y + amount * (2 * math.random() - 1)
-                    curve.cp2x = curve.cp2x + amount * (2 * math.random() - 1)
-                    curve.cp2y = curve.cp2y + amount * (2 * math.random() - 1)
+                    curve.cp1x, curve.cp1y = wobblePoint(curve.cp1x, curve.cp1y, amount, seed)
+                    curve.cp2x, curve.cp2y = wobblePoint(curve.cp2x, curve.cp2y, amount, seed)
                     if POINTS then
-                        curve.x0 = curve.x0 + amount * (2 * math.random() - 1)
-                        curve.y0 = curve.y0 + amount * (2 * math.random() - 1)
-                        curve.x = curve.x + amount * (2 * math.random() - 1)
-                        curve.y = curve.y + amount * (2 * math.random() - 1)
+                        curve.x0, curve.y0 = wobblePoint(curve.x0, curve.y0, amount, seed)
+                        curve.x, curve.y = wobblePoint(curve.x, curve.y, amount, seed)
                     end
                 end
             end
@@ -59,7 +64,7 @@ local function wobbleDrawing(drawing, amount)
         tween = tween:to(frames[i], 1)
     end
     tween = tween:to(frames[1], 1)
-    return tove.newFlipbook(TWEEN, tween)
+    return tove.newFlipbook(TWEEN, tween, 'mesh', 1024)
 end
 
 local flipbook
@@ -84,7 +89,7 @@ function love.draw()
 
         flipbook.t = (SPEED * t) % flipbook._duration
 
-        flipbook:draw(0.5 * W, 0.5 * H, 0, 0.6, 0.6)
+        flipbook:draw(0.5 * W, 0.5 * H, 0, SCALE, SCALE)
 
         love.graphics.pop('all')
     end
@@ -110,6 +115,8 @@ function castle.uiupdate()
     --for i = 1, #PATHS do
     --    ui.image(PATHS[i], { width = 150, height = 150 })
     --end
+
+    SCALE = ui.slider('scale', SCALE, 0.2, 4, { step = 0.01 })
 
     ui.dropdown('file', PATH, PATHS, {
         onChange = function(newPath)
