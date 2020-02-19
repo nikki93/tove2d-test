@@ -61,12 +61,10 @@ function love.touchmoved(touchId, x, y, dx, dy)
 end
 
 function love.touchreleased(touchId, x, y, dx, dy)
-    --currSubpath:lineTo(x, y)
+    currSubpath:lineTo(x, y)
 
     currSubpath = nil
     currPath = nil
-
-    graphics:clearCache()
 
     if wobbleEnabled then
         flipbook = wobble(graphics)
