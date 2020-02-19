@@ -3,7 +3,7 @@ local wobble = require 'wobble'
 
 
 local graphics = tove.newGraphics()
---graphics:setDisplay('mesh', 'rigid', 4)
+graphics:setDisplay('mesh', 'rigid', 4)
 local flipbook
 local wobbleEnabled = true
 
@@ -11,11 +11,11 @@ local currPath
 local currSubpath
 
 
-local lineWidth = 10
+local lineWidth = 0
 local lineColor = { 0, 0, 0, 1 }
 
 
-local fillEnabled = false
+local fillEnabled = true
 local fillColor = { 1, 1, 1, 1 }
 
 
@@ -57,11 +57,35 @@ function love.touchpressed(touchId, x, y, dx, dy)
 end
 
 function love.touchmoved(touchId, x, y, dx, dy)
-    currSubpath:lineTo(x, y)
+    local lastPoint = currSubpath.points[currSubpath.points.count]
+    local dispX, dispY = x - lastPoint.x, y - lastPoint.y
+    local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
+
+    local lastLastPoint
+    local lastDispX, lastDispY
+    local lastDispLen
+    local cosAngle
+    if currSubpath.points.count >= 2 then
+        lastLastPoint = currSubpath.points[currSubpath.points.count - 1]
+        lastDispX, lastDispY = lastPoint.x - lastLastPoint.x, lastPoint.y - lastLastPoint.y
+        lastDispLen = math.sqrt(lastDispX * lastDispX + lastDispY * lastDispY)
+        cosAngle = (dispX * lastDispX + dispY * lastDispY) / (dispLen * lastDispLen)
+    end
+
+    if (lastLastPoint and cosAngle < 0.8) or dispLen > 30 then
+        if curveEnabled and lastLastPoint then
+            local hx, hy = 0.25 * (lastDispX + dispX), 0.25 * (lastDispY + dispY)
+            local lastCurve = currSubpath.curves[currSubpath.curves.count]
+            lastCurve.cp2x, lastCurve.cp2y = lastPoint.x - hx, lastPoint.y - hy
+            currSubpath:curveTo(lastPoint.x + hx, lastPoint.y + hy, x, y, x, y)
+        else
+            currSubpath:lineTo(x, y)
+        end
+    end
 end
 
 function love.touchreleased(touchId, x, y, dx, dy)
-    currSubpath:lineTo(x, y)
+    love.touchmoved(touchId, x, y, dx, dy)
 
     currSubpath = nil
     currPath = nil
