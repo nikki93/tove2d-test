@@ -1,6 +1,6 @@
 local tove = require 'tove'
 
-local AMOUNT = 4.2
+local AMOUNT = 3
 local NOISE_SCALE = 0.08
 local FRAMES = 3
 local TWEEN = 1

@@ -3,7 +3,7 @@ local wobble = require 'wobble'
 
 
 local graphics = tove.newGraphics()
-graphics:setDisplay('mesh', 'rigid', 4)
+graphics:setDisplay('mesh', 1024)
 local flipbook
 local wobbleEnabled = true
 
@@ -11,7 +11,7 @@ local currPath
 local currSubpath
 
 
-local lineWidth = 0
+local lineWidth = 12
 local lineColor = { 0, 0, 0, 1 }
 
 
@@ -19,7 +19,12 @@ local fillEnabled = true
 local fillColor = { 1, 1, 1, 1 }
 
 
-local curveEnabled = true
+local tool = 'freehand lines'
+local tools = {
+    'freehand lines',
+    'drag lines',
+    'freehand curves',
+}
 
 
 function love.draw()
@@ -46,47 +51,51 @@ function love.touchpressed(touchId, x, y, dx, dy)
     currPath:setLineColor(unpack(lineColor))
     currPath:setLineWidth(lineWidth)
 
+    currSubpath:moveTo(x, y)
+end
+
+function love.touchmoved(touchId, x, y, dx, dy)
+    if tool == 'freehand lines' or tool == 'freehand curves' then
+        local lastPoint = currSubpath.points[currSubpath.points.count]
+        local dispX, dispY = x - lastPoint.x, y - lastPoint.y
+        local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
+
+        local lastLastPoint
+        local lastDispX, lastDispY
+        local lastDispLen
+        local cosAngle
+        if currSubpath.points.count >= 2 then
+            lastLastPoint = currSubpath.points[currSubpath.points.count - 1]
+            lastDispX, lastDispY = lastPoint.x - lastLastPoint.x, lastPoint.y - lastLastPoint.y
+            lastDispLen = math.sqrt(lastDispX * lastDispX + lastDispY * lastDispY)
+            cosAngle = (dispX * lastDispX + dispY * lastDispY) / (dispLen * lastDispLen)
+        end
+
+        if (lastLastPoint and cosAngle < 0.8) or dispLen > 30 then
+            if tool == 'freehand curves' and lastLastPoint then
+                local hx, hy = 0.25 * (lastDispX + dispX), 0.25 * (lastDispY + dispY)
+                local lastCurve = currSubpath.curves[currSubpath.curves.count]
+                lastCurve.cp2x, lastCurve.cp2y = lastPoint.x - hx, lastPoint.y - hy
+                currSubpath:curveTo(lastPoint.x + hx, lastPoint.y + hy, x, y, x, y)
+            else
+                currSubpath:lineTo(x, y)
+            end
+        end
+    end
+end
+
+function love.touchreleased(touchId, x, y, dx, dy)
     if fillEnabled then
+        --if currSubpath.points.count >= 2 then
+        --    local firstPoint = currSubpath.points[1]
+        --    currSubpath:lineTo(firstPoint.x, firstPoint.y)
+        --end
         currPath:setFillColor(unpack(fillColor))
         currSubpath.isClosed = true
     else
         currSubpath.isClosed = false
     end
     
-    currSubpath:moveTo(x, y)
-end
-
-function love.touchmoved(touchId, x, y, dx, dy)
-    local lastPoint = currSubpath.points[currSubpath.points.count]
-    local dispX, dispY = x - lastPoint.x, y - lastPoint.y
-    local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
-
-    local lastLastPoint
-    local lastDispX, lastDispY
-    local lastDispLen
-    local cosAngle
-    if currSubpath.points.count >= 2 then
-        lastLastPoint = currSubpath.points[currSubpath.points.count - 1]
-        lastDispX, lastDispY = lastPoint.x - lastLastPoint.x, lastPoint.y - lastLastPoint.y
-        lastDispLen = math.sqrt(lastDispX * lastDispX + lastDispY * lastDispY)
-        cosAngle = (dispX * lastDispX + dispY * lastDispY) / (dispLen * lastDispLen)
-    end
-
-    if (lastLastPoint and cosAngle < 0.8) or dispLen > 30 then
-        if curveEnabled and lastLastPoint then
-            local hx, hy = 0.25 * (lastDispX + dispX), 0.25 * (lastDispY + dispY)
-            local lastCurve = currSubpath.curves[currSubpath.curves.count]
-            lastCurve.cp2x, lastCurve.cp2y = lastPoint.x - hx, lastPoint.y - hy
-            currSubpath:curveTo(lastPoint.x + hx, lastPoint.y + hy, x, y, x, y)
-        else
-            currSubpath:lineTo(x, y)
-        end
-    end
-end
-
-function love.touchreleased(touchId, x, y, dx, dy)
-    love.touchmoved(touchId, x, y, dx, dy)
-
     currSubpath = nil
     currPath = nil
 
@@ -99,6 +108,8 @@ end
 local ui = castle.ui
 
 function castle.uiupdate()
+    tool = ui.dropdown('tool', tool, tools)
+
     ui.box('line box', { flexDirection = 'row' }, function()
         ui.box('line width box', { flex = 1 }, function()
             lineWidth = ui.slider('line width', lineWidth, 0, 30)
@@ -126,8 +137,6 @@ function castle.uiupdate()
             end
         end
     })
-
-    curveEnabled = ui.toggle('curve off', 'curve on', curveEnabled)
 
     if ui.button('clear') then
         graphics:clear()
