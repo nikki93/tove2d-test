@@ -28,12 +28,10 @@ local tools = {
 local TOUCH_SLOP = 120
 
 local isTouching = false
+local touchX, touchY
 
 function love.draw()
     love.graphics.clear(0.54, 0.64, 0.80)
-
-    local tx, ty = love.mouse.getPosition()
-    ty = ty - TOUCH_SLOP
 
     if flipbook then
         flipbook.t = (8 * love.timer.getTime()) % flipbook._duration
@@ -43,7 +41,7 @@ function love.draw()
             local clone = graphics:clone()
             local lastPath = clone.paths[clone.paths.count]
             local lastSubpath = lastPath.subpaths[lastPath.subpaths.count]
-            lastSubpath:lineTo(tx, ty)
+            lastSubpath:lineTo(touchX, touchY)
             clone:draw()
         else
             graphics:draw()
@@ -52,7 +50,7 @@ function love.draw()
 
     if isTouching then
         love.graphics.setColor(1, 0, 0)
-        love.graphics.circle('fill', tx, ty, 5)
+        love.graphics.circle('fill', touchX, touchY, 5)
     end
 end
 
@@ -61,12 +59,14 @@ function love.touchpressed(touchId, x, y, dx, dy)
     isTouching = true
 
     y = y - TOUCH_SLOP
+    touchX, touchY = x, y
 
     flipbook = nil
 end
 
 function love.touchmoved(touchId, x, y, dx, dy)
     y = y - TOUCH_SLOP
+    touchX, touchY = x, y
 
     if not currSubpath then
         if dx == 0 and dy == 0 then
