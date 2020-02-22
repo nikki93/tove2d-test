@@ -16,6 +16,20 @@ local function wobblePoint(x, y, seed)
     return x + dx1 + dx2, y + dy1 + dy2
 end
 
+local function copyCurve(dest, src)
+    dest.x0, dest.y0 = src.x0, src.y0
+    dest.cp1x, dest.cp1y = src.cp1x, src.cp1y
+    dest.cp2x, dest.cp2y = src.cp2x, src.cp2y
+    dest.x, dest.y = src.x, src.y
+end
+
+local function wobbleCurve(dest, src, seed)
+    dest.x0, dest.y0 = wobblePoint(src.x0, src.y0, seed)
+    dest.cp1x, dest.cp1y = wobblePoint(src.cp1x, src.cp1y, seed)
+    dest.cp2x, dest.cp2y = wobblePoint(src.cp2x, src.cp2y, seed)
+    dest.x, dest.y = wobblePoint(src.x, src.y, seed)
+end
+
 local function wobbleDrawing(drawing)
     local frames = {}
     for f = 1, FRAMES do
@@ -27,19 +41,15 @@ local function wobbleDrawing(drawing)
                 local subpath = path.subpaths[j]
                 local origSubpath = origPath.subpaths[j]
                 subpath:warp(function(x, y, c)
-                    local newX, newY = wobblePoint(x, y, f)
+                    local newX, newY = wobblePoint(x, y, f * FRAMES + j)
                     return newX, newY, c
                 end)
-                --subpath.isClosed = origSubpath.isClosed
-                --local numCurves = subpath.curves.count
-                --for k = 1, numCurves do
-                --    local seed = FRAMES * f + j
-                --    local curve = subpath.curves[k]
-                --    curve.cp1x, curve.cp1y = wobblePoint(curve.cp1x, curve.cp1y, seed)
-                --    curve.cp2x, curve.cp2y = wobblePoint(curve.cp2x, curve.cp2y, seed)
-                --    curve.x0, curve.y0 = wobblePoint(curve.x0, curve.y0, seed)
-                --    curve.x, curve.y = wobblePoint(curve.x, curve.y, seed)
-                --end
+                if not subpath.isClosed then
+                    local numCurves = subpath.curves.count
+                    copyCurve(subpath.curves[1], origSubpath.curves[1])
+                    copyCurve(subpath.curves[numCurves - 1], origSubpath.curves[numCurves - 1])
+                    copyCurve(subpath.curves[numCurves], origSubpath.curves[numCurves])
+                end
             end
         end
         table.insert(frames, clone)

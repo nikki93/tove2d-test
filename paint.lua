@@ -81,7 +81,7 @@ function love.touchmoved(touchId, x, y, dx, dy)
         graphics:addPath(currPath)
 
         currPath:setLineColor(unpack(lineColor))
-        currPath:setLineWidth(lineWidth)
+        currPath:setLineWidth(math.max(2, lineWidth))
         currPath:setMiterLimit(1)
 
         currSubpath:moveTo(x - dx, y - dy)
@@ -165,6 +165,8 @@ function love.touchreleased(touchId, x, y, dx, dy)
             end
         end
         
+        currPath:setLineWidth(lineWidth)
+
         graphics:clean(0.2)
 
         currSubpath = nil
@@ -184,7 +186,7 @@ function castle.uiupdate()
 
     ui.box('line box', { flexDirection = 'row' }, function()
         ui.box('line width box', { flex = 1 }, function()
-            lineWidth = ui.slider('line width', lineWidth, 1, 30)
+            lineWidth = ui.slider('line width', lineWidth, 0, 30)
         end)
 
         lineColor[1], lineColor[2], lineColor[3] = ui.colorPicker(
