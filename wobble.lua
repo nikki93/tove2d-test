@@ -1,10 +1,10 @@
 local tove = require 'tove'
 
-local AMOUNT = 3
+local AMOUNT = 1.8
 local NOISE_SCALE = 0.08
 local FRAMES = 3
 local TWEEN = 1
-local SPEED = 8
+local SPEED = 10
 local POINTS = false
 
 local function wobblePoint(x, y, seed)
@@ -20,10 +20,28 @@ local function wobbleDrawing(drawing)
     local frames = {}
     for f = 1, FRAMES do
         local clone = drawing:clone()
-        clone:warp(function(x, y, c)
-            local newX, newY = wobblePoint(x, y, f)
-            return newX, newY, c
-        end)
+        for i = 1, clone.paths.count do
+            local path = clone.paths[i]
+            local origPath = drawing.paths[i]
+            for j = 1, path.subpaths.count do
+                local subpath = path.subpaths[j]
+                local origSubpath = origPath.subpaths[j]
+                subpath:warp(function(x, y, c)
+                    local newX, newY = wobblePoint(x, y, f)
+                    return newX, newY, c
+                end)
+                --subpath.isClosed = origSubpath.isClosed
+                --local numCurves = subpath.curves.count
+                --for k = 1, numCurves do
+                --    local seed = FRAMES * f + j
+                --    local curve = subpath.curves[k]
+                --    curve.cp1x, curve.cp1y = wobblePoint(curve.cp1x, curve.cp1y, seed)
+                --    curve.cp2x, curve.cp2y = wobblePoint(curve.cp2x, curve.cp2y, seed)
+                --    curve.x0, curve.y0 = wobblePoint(curve.x0, curve.y0, seed)
+                --    curve.x, curve.y = wobblePoint(curve.x, curve.y, seed)
+                --end
+            end
+        end
         table.insert(frames, clone)
     end
     local tween = tove.newTween(frames[1])

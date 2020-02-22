@@ -11,7 +11,7 @@ local currPath
 local currSubpath
 
 
-local lineWidth = 5
+local lineWidth = 10
 local lineColor = { 0, 0, 0, 1 }
 
 
@@ -25,7 +25,8 @@ local tools = {
     'drag lines',
 }
 
-local TOUCH_SLOP = 120
+local DEFAULT_TOUCH_SLOP = 120
+local touchSlop = DEFAULT_TOUCH_SLOP
 
 local isTouching = false
 local touchX, touchY
@@ -58,14 +59,14 @@ end
 function love.touchpressed(touchId, x, y, dx, dy)
     isTouching = true
 
-    y = y - TOUCH_SLOP
+    y = y - touchSlop
     touchX, touchY = x, y
 
     flipbook = nil
 end
 
 function love.touchmoved(touchId, x, y, dx, dy)
-    y = y - TOUCH_SLOP
+    y = y - touchSlop
     touchX, touchY = x, y
 
     if not currSubpath then
@@ -81,6 +82,7 @@ function love.touchmoved(touchId, x, y, dx, dy)
 
         currPath:setLineColor(unpack(lineColor))
         currPath:setLineWidth(lineWidth)
+        currPath:setMiterLimit(1)
 
         currSubpath:moveTo(x - dx, y - dy)
     end
@@ -130,24 +132,44 @@ end
 function love.touchreleased(touchId, x, y, dx, dy)
     isTouching = false
 
-    y = y - TOUCH_SLOP
+    if currPath and currSubpath then
+        y = y - touchSlop
 
-    if fillEnabled then
-        currPath:setFillColor(unpack(fillColor))
-        currSubpath.isClosed = true
-    else
-        currSubpath.isClosed = false
-    end
-
-    local numCurves = currSubpath.curves.count
-    if numCurves < 3 then
-    else
-        for i = 1, numCurves do
+        if fillEnabled then
+            currPath:setFillColor(unpack(fillColor))
+            currSubpath.isClosed = true
+        else
+            currSubpath:lineTo(x, y)
+            graphics:clean(0.2)
+            currSubpath.isClosed = false
         end
+
+        local numCurves = currSubpath.curves.count
+        if numCurves >= 3 then
+            for i = 1, numCurves do
+                local p0 = currSubpath.curves[i]
+                local p1 = currSubpath.curves[i == numCurves and 1 or (i + 1)]
+
+                local v1x, v1y = p0.x - p0.cp2x, p0.y - p0.cp2y
+                local v1l = math.sqrt(v1x * v1x + v1y * v1y)
+                v1x, v1y = v1x / v1l, v1y / v1l
+                local v2x, v2y = p1.cp1x - p1.x0, p1.cp1y - p1.y0
+                local v2l = math.sqrt(v2x * v2x + v2y * v2y)
+                v2x, v2y = v2x / v2l, v2y / v2l
+
+                if v1x * v2x + v1y * v2y > 0.3 then
+                    local hx, hy = 0.5 * (v1x + v2x), 0.5 * (v1y + v2y)
+                    p0.cp2x, p0.cp2y = p0.x - v1l * hx, p0.y - v1l * hy
+                    p1.cp1x, p1.cp1y = p1.x0 + v2l * hx, p1.y0 + v2l * hy
+                end
+            end
+        end
+        
+        graphics:clean(0.2)
+
+        currSubpath = nil
+        currPath = nil
     end
-    
-    currSubpath = nil
-    currPath = nil
 
     if wobbleEnabled then
         flipbook = wobble(graphics)
@@ -167,9 +189,7 @@ function castle.uiupdate()
 
         lineColor[1], lineColor[2], lineColor[3] = ui.colorPicker(
             'line color', lineColor[1], lineColor[2], lineColor[3], 1, { enableAlpha = false })
-    end)
 
-    ui.box('fill box', { flexDirection = 'row' }, function()
         fillEnabled = ui.toggle('fill off', 'fill on', fillEnabled)
         if fillEnabled then
             fillColor[1], fillColor[2], fillColor[3] = ui.colorPicker(
@@ -184,6 +204,16 @@ function castle.uiupdate()
                 flipbook = wobble(graphics)
             else
                 flipbook = nil
+            end
+        end
+    })
+
+    ui.toggle('touch slop off', 'touch slop on', touchSlop == DEFAULT_TOUCH_SLOP, {
+        onToggle = function(newTouchSlopEnabled)
+            if newTouchSlopEnabled then
+                touchSlop = DEFAULT_TOUCH_SLOP
+            else
+                touchSlop = 0
             end
         end
     })
