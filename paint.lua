@@ -11,7 +11,7 @@ local currPath
 local currSubpath
 
 
-local lineWidth = 12
+local lineWidth = 5
 local lineColor = { 0, 0, 0, 1 }
 
 
@@ -23,77 +23,127 @@ local tool = 'freehand lines'
 local tools = {
     'freehand lines',
     'drag lines',
-    'freehand curves',
 }
 
+local TOUCH_SLOP = 120
+
+local isTouching = false
 
 function love.draw()
     love.graphics.clear(0.54, 0.64, 0.80)
+
+    local tx, ty = love.mouse.getPosition()
+    ty = ty - TOUCH_SLOP
 
     if flipbook then
         flipbook.t = (8 * love.timer.getTime()) % flipbook._duration
         flipbook:draw()
     else
-        graphics:draw()
+        if isTouching and currSubpath then
+            local clone = graphics:clone()
+            local lastPath = clone.paths[clone.paths.count]
+            local lastSubpath = lastPath.subpaths[lastPath.subpaths.count]
+            lastSubpath:lineTo(tx, ty)
+            clone:draw()
+        else
+            graphics:draw()
+        end
+    end
+
+    if isTouching then
+        love.graphics.setColor(1, 0, 0)
+        love.graphics.circle('fill', tx, ty, 5)
     end
 end
 
 
 function love.touchpressed(touchId, x, y, dx, dy)
+    isTouching = true
+
+    y = y - TOUCH_SLOP
+
     flipbook = nil
-
-    currSubpath = tove.newSubpath()
-
-    currPath = tove.newPath()
-    currPath:addSubpath(currSubpath)
-    graphics:addPath(currPath)
-
-    currPath:setLineColor(unpack(lineColor))
-    currPath:setLineWidth(lineWidth)
-
-    currSubpath:moveTo(x, y)
 end
 
 function love.touchmoved(touchId, x, y, dx, dy)
-    if tool == 'freehand lines' or tool == 'freehand curves' then
-        local lastPoint = currSubpath.points[currSubpath.points.count]
-        local dispX, dispY = x - lastPoint.x, y - lastPoint.y
-        local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
+    y = y - TOUCH_SLOP
 
-        local lastLastPoint
-        local lastDispX, lastDispY
-        local lastDispLen
-        local cosAngle
-        if currSubpath.points.count >= 2 then
-            lastLastPoint = currSubpath.points[currSubpath.points.count - 1]
-            lastDispX, lastDispY = lastPoint.x - lastLastPoint.x, lastPoint.y - lastLastPoint.y
-            lastDispLen = math.sqrt(lastDispX * lastDispX + lastDispY * lastDispY)
-            cosAngle = (dispX * lastDispX + dispY * lastDispY) / (dispLen * lastDispLen)
+    if not currSubpath then
+        if dx == 0 and dy == 0 then
+            return
         end
 
-        if (lastLastPoint and cosAngle < 0.8) or dispLen > 30 then
-            if tool == 'freehand curves' and lastLastPoint then
-                local hx, hy = 0.25 * (lastDispX + dispX), 0.25 * (lastDispY + dispY)
-                local lastCurve = currSubpath.curves[currSubpath.curves.count]
-                lastCurve.cp2x, lastCurve.cp2y = lastPoint.x - hx, lastPoint.y - hy
-                currSubpath:curveTo(lastPoint.x + hx, lastPoint.y + hy, x, y, x, y)
-            else
-                currSubpath:lineTo(x, y)
+        currSubpath = tove.newSubpath()
+
+        currPath = tove.newPath()
+        currPath:addSubpath(currSubpath)
+        graphics:addPath(currPath)
+
+        currPath:setLineColor(unpack(lineColor))
+        currPath:setLineWidth(lineWidth)
+
+        currSubpath:moveTo(x - dx, y - dy)
+    end
+
+    if tool == 'freehand lines' then
+        local numPoints = currSubpath.points.count
+
+        local lastPoint = currSubpath.points[numPoints]
+
+        local place = numPoints < 2
+
+        -- Place if at least 30px from last point
+        local dispX, dispY = x - lastPoint.x, y - lastPoint.y
+        local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
+        if dispLen > 30 then
+            place = true
+        end
+
+        -- Previous segment
+        local lastCurve = currSubpath.points.count > 2 and currSubpath.curves[currSubpath.curves.count]
+        local lastCurveDX, lastCurveDY
+        if lastCurve then
+            lastCurveDX, lastCurveDY = lastCurve.x - lastCurve.x0, lastCurve.y - lastCurve.y0
+        end
+
+        -- Not already placing and it's a corner? Place at corner
+        local cornerX, cornerY
+        if not place and lastCurve then
+            local lastCurveLen = math.sqrt(lastCurveDX * lastCurveDX + lastCurveDY * lastCurveDY)
+            local dot = (dx * lastCurveDX + dy * lastCurveDY) / (math.sqrt(dx * dx + dy * dy) * lastCurveLen)
+            if dot < 0.8 then
+                cornerX, cornerY = x - dx, y - dy
             end
+        end
+
+        if cornerX and cornerY then
+            currSubpath:lineTo(cornerX, cornerY)
+            currSubpath:lineTo(x, y)
+            graphics:clean(0.2)
+        elseif place then
+            currSubpath:lineTo(x, y)
+            graphics:clean(0.2)
         end
     end
 end
 
 function love.touchreleased(touchId, x, y, dx, dy)
+    isTouching = false
+
+    y = y - TOUCH_SLOP
+
     if fillEnabled then
-        --if currSubpath.points.count >= 2 then
-        --    local firstPoint = currSubpath.points[1]
-        --    currSubpath:lineTo(firstPoint.x, firstPoint.y)
-        --end
         currPath:setFillColor(unpack(fillColor))
         currSubpath.isClosed = true
     else
         currSubpath.isClosed = false
+    end
+
+    local numCurves = currSubpath.curves.count
+    if numCurves < 3 then
+    else
+        for i = 1, numCurves do
+        end
     end
     
     currSubpath = nil
@@ -112,7 +162,7 @@ function castle.uiupdate()
 
     ui.box('line box', { flexDirection = 'row' }, function()
         ui.box('line width box', { flex = 1 }, function()
-            lineWidth = ui.slider('line width', lineWidth, 0, 30)
+            lineWidth = ui.slider('line width', lineWidth, 1, 30)
         end)
 
         lineColor[1], lineColor[2], lineColor[3] = ui.colorPicker(
