@@ -3,7 +3,8 @@ local wobble = require 'wobble'
 
 
 local graphics = tove.newGraphics()
-graphics:setDisplay('mesh', 1024)
+graphics:setResolution(2)
+--graphics:setDisplay('mesh', 1024)
 local flipbook
 local wobbleEnabled = true
 
@@ -64,6 +65,9 @@ function love.draw()
         love.graphics.setColor(1, 0, 0)
         love.graphics.circle('fill', touchX, touchY, 5)
     end
+
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.print('fps: ' .. love.timer.getFPS(), 20, 20)
 end
 
 
@@ -126,9 +130,9 @@ function love.touchmoved(touchId, x, y, dx, dy)
         if not place and lastCurve then
             local lastCurveLen = math.sqrt(lastCurveDX * lastCurveDX + lastCurveDY * lastCurveDY)
             local dot = (dx * lastCurveDX + dy * lastCurveDY) / (math.sqrt(dx * dx + dy * dy) * lastCurveLen)
-            if dot < 0.45 then
+            if dot < 0.55 then
                 cornerX, cornerY = x - dx, y - dy
-                if lastCornerX and lastCornerY then
+                if numPoints >= 32 and lastCornerX and lastCornerY then
                     local cornerDX, cornerDY = cornerX - lastCornerX, cornerY - lastCornerY
                     if cornerDX * cornerDX + cornerDY * cornerDY < 3 * 3 then
                         cornerX, cornerY = nil, nil
@@ -142,10 +146,10 @@ function love.touchmoved(touchId, x, y, dx, dy)
 
         if cornerX and cornerY then
             currSubpath:lineTo(cornerX, cornerY)
-            graphics:clean(0.2)
+            --graphics:clean(0.2)
         elseif place then
             currSubpath:lineTo(x, y)
-            graphics:clean(0.2)
+            --graphics:clean(0.2)
         end
     end
 end
@@ -156,12 +160,12 @@ function love.touchreleased(touchId, x, y, dx, dy)
     if currPath and currSubpath then
         y = y - touchSlop
 
+        currSubpath:lineTo(x, y)
+
         if fillEnabled then
             currPath:setFillColor(unpack(fillColor))
             currSubpath.isClosed = true
         else
-            currSubpath:lineTo(x, y)
-            graphics:clean(0.2)
             currSubpath.isClosed = false
         end
 
@@ -180,6 +184,8 @@ function love.touchreleased(touchId, x, y, dx, dy)
 
                 if v1x * v2x + v1y * v2y > 0.3 then
                     local hx, hy = 0.5 * (v1x + v2x), 0.5 * (v1y + v2y)
+                    local hl = math.sqrt(hx * hx + hy * hy)
+                    hx, hy = hx / hl, hy / hl
                     p0.cp2x, p0.cp2y = p0.x - v1l * hx, p0.y - v1l * hy
                     p1.cp1x, p1.cp1y = p1.x0 + v2l * hx, p1.y0 + v2l * hy
                 end

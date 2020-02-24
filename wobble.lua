@@ -32,6 +32,7 @@ end
 
 local function wobbleDrawing(drawing)
     local frames = {}
+    local display = drawing:getDisplay()
     for f = 1, FRAMES do
         local clone = drawing:clone()
         for i = 1, clone.paths.count do
@@ -46,8 +47,10 @@ local function wobbleDrawing(drawing)
                 end)
                 if not subpath.isClosed then -- Need to fix ends if not closed
                     local numCurves = subpath.curves.count
-                    copyCurve(subpath.curves[1], origSubpath.curves[1])
-                    copyCurve(subpath.curves[numCurves - 1], origSubpath.curves[numCurves - 1])
+                    if display ~= 'texture' then
+                        copyCurve(subpath.curves[1], origSubpath.curves[1])
+                        copyCurve(subpath.curves[numCurves - 1], origSubpath.curves[numCurves - 1])
+                    end
                     copyCurve(subpath.curves[numCurves], origSubpath.curves[numCurves])
                 end
             end
