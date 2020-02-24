@@ -31,6 +31,8 @@ local touchSlop = DEFAULT_TOUCH_SLOP
 local isTouching = false
 local touchX, touchY
 
+local lastCornerX, lastCornerY
+
 function love.draw()
     love.graphics.clear(0.54, 0.64, 0.80)
 
@@ -44,6 +46,15 @@ function love.draw()
             local lastSubpath = lastPath.subpaths[lastPath.subpaths.count]
             lastSubpath:lineTo(touchX, touchY)
             clone:draw()
+
+            --for i = 1, currSubpath.curves.count do
+            --    local c = currSubpath.curves[i]
+            --    love.graphics.setColor(0, 1, 0)
+            --    love.graphics.circle('fill', c.x0, c.y0, 3)
+            --    if i == currSubpath.curves.count then
+            --        love.graphics.circle('fill', c.x, c.y, 3)
+            --    end
+            --end
         else
             graphics:draw()
         end
@@ -61,6 +72,8 @@ function love.touchpressed(touchId, x, y, dx, dy)
 
     y = y - touchSlop
     touchX, touchY = x, y
+
+    lastCornerX, lastCornerY = nil, nil
 
     flipbook = nil
 end
@@ -96,8 +109,8 @@ function love.touchmoved(touchId, x, y, dx, dy)
 
         -- Place if at least 30px from last point
         local dispX, dispY = x - lastPoint.x, y - lastPoint.y
-        local dispLen = math.sqrt(dispX * dispX + dispY * dispY)
-        if dispLen > 30 then
+        local dispSqLen = dispX * dispX + dispY * dispY 
+        if dispSqLen >= 30 * 30 then
             place = true
         end
 
@@ -113,14 +126,22 @@ function love.touchmoved(touchId, x, y, dx, dy)
         if not place and lastCurve then
             local lastCurveLen = math.sqrt(lastCurveDX * lastCurveDX + lastCurveDY * lastCurveDY)
             local dot = (dx * lastCurveDX + dy * lastCurveDY) / (math.sqrt(dx * dx + dy * dy) * lastCurveLen)
-            if dot < 0.8 then
+            if dot < 0.45 then
                 cornerX, cornerY = x - dx, y - dy
+                if lastCornerX and lastCornerY then
+                    local cornerDX, cornerDY = cornerX - lastCornerX, cornerY - lastCornerY
+                    if cornerDX * cornerDX + cornerDY * cornerDY < 3 * 3 then
+                        cornerX, cornerY = nil, nil
+                    end
+                end
+                if cornerX and cornerY then
+                    lastCornerX, lastCornerY = cornerX, cornerY
+                end
             end
         end
 
         if cornerX and cornerY then
             currSubpath:lineTo(cornerX, cornerY)
-            currSubpath:lineTo(x, y)
             graphics:clean(0.2)
         elseif place then
             currSubpath:lineTo(x, y)
@@ -171,6 +192,8 @@ function love.touchreleased(touchId, x, y, dx, dy)
 
         currSubpath = nil
         currPath = nil
+
+        lastCornerX, lastCornerY = nil, nil
     end
 
     if wobbleEnabled then
