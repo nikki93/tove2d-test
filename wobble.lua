@@ -44,7 +44,7 @@ local function wobbleDrawing(drawing)
                     local newX, newY = wobblePoint(x, y, f * FRAMES + j)
                     return newX, newY, c
                 end)
-                if not subpath.isClosed then
+                if not subpath.isClosed then -- Need to fix ends if not closed
                     local numCurves = subpath.curves.count
                     copyCurve(subpath.curves[1], origSubpath.curves[1])
                     copyCurve(subpath.curves[numCurves - 1], origSubpath.curves[numCurves - 1])
